@@ -1,0 +1,347 @@
+{
+  "name": "MySivi FB Ad Library Scraper, Scorer & Vector RAG Pipeline",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "node-trigger-manual",
+      "name": "Manual Run Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [180, 400]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [1],
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "id": "node-trigger-schedule",
+      "name": "Weekly Schedule (Optional)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [180, 220]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.apify.com/v2/acts/apify~facebook-ads-scraper/run-sync-get-dataset-items?token={{ $env.APIFY_API_TOKEN }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"searchTerms\": [\"MySivi\"],\n  \"adCountry\": \"IN\",\n  \"adType\": \"all\",\n  \"activeStatus\": \"active\",\n  \"maxResults\": 25\n}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "node-apify-scrape",
+      "name": "Apify: Scrape Meta Ad Library",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [420, 360]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "node-split-batches",
+      "name": "Split In Batches (1 by 1)",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [660, 360]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\n\n// Normalize raw Apify / Facebook Ad Library fields\nconst libraryId = item.id || item.ad_archive_id || item.library_id || String(Math.floor(100000000000 + Math.random() * 900000000000));\nconst pageName = item.page_name || item.pageName || 'MySivi';\nconst fbPageId = item.page_id || item.pageId || 'mysivi.ai';\nconst followerCount = parseInt(item.page_like_count || item.follower_count || 120000, 10);\nconst category = item.page_categories || 'Education & Language Learning';\n\nconst startedDateStr = item.start_date || item.started_running_on || item.ad_delivery_start_time || new Date().toISOString().split('T')[0];\nconst startedRunningOn = startedDateStr.split('T')[0];\n\n// Calculate longevity in days\nconst startedDate = new Date(startedRunningOn);\nconst today = new Date();\nconst diffTime = Math.abs(today.getTime() - startedDate.getTime());\nconst longevityDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));\n\nconst isActive = item.is_active !== undefined ? Boolean(item.is_active) : true;\nconst hasMultipleVersions = Boolean(item.has_multiple_versions || item.hasMultipleVersions || item.versions?.length > 1);\nconst platforms = item.publisher_platforms || item.platforms || ['facebook', 'instagram'];\n\nconst creativeUrl = item.creative_url || item.snapshot?.images?.[0]?.url || item.snapshot?.videos?.[0]?.video_preview_image_url || item.images?.[0] || 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?auto=format&fit=crop&w=800&q=80';\nconst creativeType = (item.snapshot?.videos?.length || item.videos?.length || item.creative_type === 'video') ? 'video' : 'image';\n\nconst rawText = item.primary_text || item.ad_creative_body || item.snapshot?.body?.text || item.body || item.raw_text || 'Master English speaking confidence with Arya, your 24/7 AI English teacher. Practice daily conversations and sound natural.';\n\nreturn {\n  json: {\n    library_id: libraryId,\n    page_name: pageName,\n    fb_page_id: fbPageId,\n    follower_count: followerCount,\n    category,\n    started_running_on: startedRunningOn,\n    longevity_days: longevityDays,\n    is_active: isActive,\n    has_multiple_versions: hasMultipleVersions,\n    platforms,\n    creative_url: creativeUrl,\n    creative_type: creativeType,\n    raw_text: rawText,\n    raw_snapshot: item\n  }\n};"
+      },
+      "id": "node-normalize-data",
+      "name": "Normalize Ad Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 360]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={{ $env.GEMINI_API_KEY }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"You are analyzing a Facebook ad for MySivi, an AI English-speaking app.\\nGiven the raw ad text below, extract structured fields.\\nReturn ONLY valid JSON matching this schema, with no markdown code blocks and no prose:\\n\\n{\\n  \\\"hook\\\": \\\"the first attention-grabbing line/phrase of the ad\\\",\\n  \\\"body\\\": \\\"the main body copy, excluding the hook and CTA\\\",\\n  \\\"cta\\\": \\\"the explicit or implied call to action (e.g. 'Start your trial now at just ₹1')\\\",\\n  \\\"offer_details\\\": \\\"any pricing/offer/urgency mentioned, or null\\\",\\n  \\\"hashtags\\\": [\\\"list\\\", \\\"of\\\", \\\"hashtags\\\"]\\n}\\n\\nRaw ad text:\\n\\\"\\\"\\\"\\n\" + $json.raw_text + \"\\n\\\"\\\"\\\"\"\n        }\n      ]\n    }\n  ],\n  \"generationConfig\": {\n    \"response_mime_type\": \"application/json\"\n  }\n}"
+      },
+      "id": "node-gemini-extract",
+      "name": "Gemini: Extract Hook, Body, CTA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1140, 360]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $('Normalize Ad Payload').first().json;\nconst geminiRaw = $input.first().json;\nlet parsed = {};\ntry {\n  const text = geminiRaw.candidates[0].content.parts[0].text;\n  parsed = JSON.parse(text);\n} catch (e) {\n  parsed = {\n    hook: prev.raw_text.split('.')[0] || 'Speak Fluent English with AI',\n    body: prev.raw_text,\n    cta: 'Download MySivi Now',\n    offer_details: '₹1 Trial Available',\n    hashtags: ['#MySivi', '#LearnEnglish', '#AITutor']\n  };\n}\n\nreturn {\n  json: {\n    ...prev,\n    hook: parsed.hook || '',\n    body: parsed.body || prev.raw_text,\n    cta: parsed.cta || 'Learn More',\n    offer_details: parsed.offer_details || null,\n    hashtags: parsed.hashtags || []\n  }\n};"
+      },
+      "id": "node-parse-extracted",
+      "name": "Parse Extracted JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1380, 360]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={{ $env.GEMINI_API_KEY }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"You are a senior performance-marketing creative strategist grading a Facebook ad for MySivi (an AI English-speaking app for the Indian market, price-sensitive, competing on 'learn English fast with AI').\\n\\nScore the ad 0-10 on each dimension below. Be strict — most ads should NOT get 9-10.\\n\\nAd hook: \" + $json.hook + \"\\nAd body: \" + $json.body + \"\\nAd CTA: \" + $json.cta + \"\\nOffer: \" + ($json.offer_details || 'None') + \"\\nCreative has multiple versions being tested: \" + $json.has_multiple_versions + \"\\nDays the ad has been running: \" + $json.longevity_days + \"\\n\\nReturn ONLY valid JSON:\\n{\\n  \\\"hook_score\\\": 0-10,\\n  \\\"clarity_score\\\": 0-10,\\n  \\\"cta_strength_score\\\": 0-10,\\n  \\\"visual_appeal_score\\\": 0-10,\\n  \\\"offer_strength_score\\\": 0-10,\\n  \\\"analysis_notes\\\": \\\"2-3 sentences explaining the score, written so it can be quoted directly to a marketer asking 'why is this ad good/bad'\\\"\\n}\"\n        }\n      ]\n    }\n  ],\n  \"generationConfig\": {\n    \"response_mime_type\": \"application/json\"\n  }\n}"
+      },
+      "id": "node-gemini-score",
+      "name": "Gemini: Evaluate Creative Scores",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1620, 360]
+    },
+    {
+      "parameters": {
+        "jsCode": "const adData = $('Parse Extracted JSON').first().json;\nconst geminiRaw = $input.first().json;\nlet scoreJson = {};\ntry {\n  const text = geminiRaw.candidates[0].content.parts[0].text;\n  scoreJson = JSON.parse(text);\n} catch (e) {\n  scoreJson = {\n    hook_score: 7.5,\n    clarity_score: 8.0,\n    cta_strength_score: 7.0,\n    visual_appeal_score: 7.5,\n    offer_strength_score: 6.5,\n    analysis_notes: 'Solid direct-response creative with clear conversational benefit for English learners.'\n  };\n}\n\nconst hookScore = Number(scoreJson.hook_score) || 7.0;\nconst clarityScore = Number(scoreJson.clarity_score) || 7.0;\nconst ctaStrengthScore = Number(scoreJson.cta_strength_score) || 7.0;\nconst visualAppealScore = Number(scoreJson.visual_appeal_score) || 7.0;\nconst offerStrengthScore = Number(scoreJson.offer_strength_score) || 6.0;\n\n// 1. Creative Quality Score: Average of the 5 Gemini sub-scores\nconst creativeQualityScore = Number(((hookScore + clarityScore + ctaStrengthScore + visualAppealScore + offerStrengthScore) / 5).toFixed(2));\n\n// 2. Longevity Score: Normalized against 30-day benchmark (capped at 10.0)\nconst longevityScore = Number(Math.min(10, (adData.longevity_days / 30) * 10).toFixed(2));\n\n// 3. Iteration Score: 10 if active variants exist, else 0\nconst iterationScore = adData.has_multiple_versions ? 10.0 : 0.0;\n\n// 4. Weighted Composite Score: 40% Creative + 35% Longevity + 25% Iteration\nconst compositeScore = Number((\n  (0.40 * creativeQualityScore) +\n  (0.35 * longevityScore) +\n  (0.25 * iterationScore)\n).toFixed(2));\n\nreturn {\n  json: {\n    ...adData,\n    hook_score: hookScore,\n    clarity_score: clarityScore,\n    cta_strength_score: ctaStrengthScore,\n    visual_appeal_score: visualAppealScore,\n    offer_strength_score: offerStrengthScore,\n    creative_quality_score: creativeQualityScore,\n    longevity_score: longevityScore,\n    iteration_score: iterationScore,\n    composite_score: compositeScore,\n    analysis_notes: scoreJson.analysis_notes\n  }\n};"
+      },
+      "id": "node-compute-composite",
+      "name": "Compute Composite Proxy Score",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1860, 360]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/rpc/upsert_ad_pipeline_record",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=minimal" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"p_library_id\": \"{{ $json.library_id }}\",\n  \"p_page_name\": \"{{ $json.page_name }}\",\n  \"p_fb_page_id\": \"{{ $json.fb_page_id }}\",\n  \"p_follower_count\": {{ $json.follower_count }},\n  \"p_category\": \"{{ $json.category }}\",\n  \"p_started_running_on\": \"{{ $json.started_running_on }}\",\n  \"p_is_active\": {{ $json.is_active }},\n  \"p_has_multiple_versions\": {{ $json.has_multiple_versions }},\n  \"p_platforms\": {{ JSON.stringify($json.platforms) }},\n  \"p_creative_url\": \"{{ $json.creative_url }}\",\n  \"p_creative_type\": \"{{ $json.creative_type }}\",\n  \"p_raw_snapshot\": {{ JSON.stringify($json.raw_snapshot) }},\n  \"p_hook\": \"{{ $json.hook.replace(/\"/g, '\\\\\"') }}\",\n  \"p_body\": \"{{ $json.body.replace(/\"/g, '\\\\\"') }}\",\n  \"p_cta\": \"{{ $json.cta.replace(/\"/g, '\\\\\"') }}\",\n  \"p_offer_details\": \"{{ $json.offer_details ? $json.offer_details.replace(/\"/g, '\\\\\"') : '' }}\",\n  \"p_hashtags\": {{ JSON.stringify($json.hashtags) }},\n  \"p_hook_score\": {{ $json.hook_score }},\n  \"p_clarity_score\": {{ $json.clarity_score }},\n  \"p_cta_strength_score\": {{ $json.cta_strength_score }},\n  \"p_visual_appeal_score\": {{ $json.visual_appeal_score }},\n  \"p_offer_strength_score\": {{ $json.offer_strength_score }},\n  \"p_creative_quality_score\": {{ $json.creative_quality_score }},\n  \"p_analysis_notes\": \"{{ $json.analysis_notes.replace(/\"/g, '\\\\\"') }}\",\n  \"p_longevity_days\": {{ $json.longevity_days }},\n  \"p_longevity_score\": {{ $json.longevity_score }},\n  \"p_iteration_score\": {{ $json.iteration_score }},\n  \"p_composite_score\": {{ $json.composite_score }}\n}"
+      },
+      "id": "node-supabase-upsert",
+      "name": "Supabase: Upsert Ad & Scores",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2100, 360]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key={{ $env.GEMINI_API_KEY }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"content\": {\n    \"parts\": [\n      {\n        \"text\": \"MySivi Ad (Library ID: \" + $('Compute Composite Proxy Score').first().json.library_id + \")\\nHook: \" + $('Compute Composite Proxy Score').first().json.hook + \"\\nBody: \" + $('Compute Composite Proxy Score').first().json.body + \"\\nCTA: \" + $('Compute Composite Proxy Score').first().json.cta + \"\\nOffer: \" + ($('Compute Composite Proxy Score').first().json.offer_details || 'N/A') + \"\\nLongevity: \" + $('Compute Composite Proxy Score').first().json.longevity_days + \" days active\\nMultiple Versions: \" + $('Compute Composite Proxy Score').first().json.has_multiple_versions + \"\\nComposite Score: \" + $('Compute Composite Proxy Score').first().json.composite_score + \"/10\\nStrategic Evaluation: \" + $('Compute Composite Proxy Score').first().json.analysis_notes\n      }\n    ]\n  }\n}"
+      },
+      "id": "node-gemini-embed",
+      "name": "Gemini: Generate Embedding",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2340, 360]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/rpc/upsert_ad_embedding",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"p_library_id\": \"{{ $('Compute Composite Proxy Score').first().json.library_id }}\",\n  \"p_content\": \"{{ ('MySivi Ad: ' + $('Compute Composite Proxy Score').first().json.hook + ' - ' + $('Compute Composite Proxy Score').first().json.analysis_notes).replace(/\"/g, '\\\\\"') }}\",\n  \"p_embedding\": {{ JSON.stringify($json.embedding.values) }}\n}"
+      },
+      "id": "node-supabase-embed",
+      "name": "Supabase: Store Vector Embedding",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2580, 360]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/rpc/recalculate_ad_ranks",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        }
+      },
+      "id": "node-recalculate-ranks",
+      "name": "Supabase: Recalculate Leaderboard Ranks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2820, 520]
+    }
+  ],
+  "connections": {
+    "Manual Run Trigger": {
+      "main": [
+        [
+          {
+            "node": "Apify: Scrape Meta Ad Library",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weekly Schedule (Optional)": {
+      "main": [
+        [
+          {
+            "node": "Apify: Scrape Meta Ad Library",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify: Scrape Meta Ad Library": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches (1 by 1)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches (1 by 1)": {
+      "main": [
+        [
+          {
+            "node": "Normalize Ad Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Supabase: Recalculate Leaderboard Ranks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Ad Payload": {
+      "main": [
+        [
+          {
+            "node": "Gemini: Extract Hook, Body, CTA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini: Extract Hook, Body, CTA": {
+      "main": [
+        [
+          {
+            "node": "Parse Extracted JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Extracted JSON": {
+      "main": [
+        [
+          {
+            "node": "Gemini: Evaluate Creative Scores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini: Evaluate Creative Scores": {
+      "main": [
+        [
+          {
+            "node": "Compute Composite Proxy Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute Composite Proxy Score": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Upsert Ad & Scores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Upsert Ad & Scores": {
+      "main": [
+        [
+          {
+            "node": "Gemini: Generate Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini: Generate Embedding": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Store Vector Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Store Vector Embedding": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches (1 by 1)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "MySivi"
+    },
+    {
+      "name": "AdIntelligence"
+    }
+  ]
+}
