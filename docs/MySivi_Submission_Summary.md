@@ -23,7 +23,7 @@ Apify scrapes the exact assignment Ad Library URL, n8n normalizes and routes eac
 
 ## Result
 
-- **Total Real Ads Analyzed**: 28 active advertisements (scraped from the Meta Ad Library and stored in Supabase with pgvector embeddings)
+- **Total Real Ads Analyzed**: 25 active advertisements (scraped from the Meta Ad Library and stored in Supabase with pgvector embeddings)
 - **Rank #1 Best Ad**: Library ID 1647671449602821 (Composite Score: 88.8 / 100)
   - **Library ID**: 1647671449602821
   - **Composite Score**: 88.8 / 100 (0.888 / 1.0)
