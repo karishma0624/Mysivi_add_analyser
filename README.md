@@ -8,6 +8,7 @@
 - GitHub Repository: https://github.com/karishma0624/Mysivi_add_analyser.git
 - Live Deployed App: https://mysivi-add-analyser.vercel.app/
 - n8n Workflow JSON: https://drive.google.com/file/d/1YLi4GY0wZFX91vw1OgFMj3vtN1mNFKo_/view?usp=sharing
+- n8n Workflow (PDF export): https://drive.google.com/file/d/1ST-UnYE0qCH1D3NLalsbZhkZ42nrPG0U/view?usp=sharing
 - Loom Video Walkthrough: https://drive.google.com/file/d/1e6pWpN1Ji88Q2ibs9DmSUSxVpqU8tt38/view?usp=sharing
 
 ---
@@ -170,6 +171,7 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 - **Technical Methodology & Case Study (PDF - 10 Pages)**: [`docs/MySivi_Ad_Intelligence_Report.pdf`](docs/MySivi_Ad_Intelligence_Report.pdf)
 - **Technical Methodology Report (Markdown)**: [`docs/MySivi_Ad_Intelligence_Report.md`](docs/MySivi_Ad_Intelligence_Report.md)
 - **n8n Workflow JSON**: [`n8n/mysivi-ad-scraper-workflow.json`](n8n/mysivi-ad-scraper-workflow.json)
+- **n8n Workflow (PDF export)**: [View Workflow PDF Export](https://drive.google.com/file/d/1ST-UnYE0qCH1D3NLalsbZhkZ42nrPG0U/view?usp=sharing)
 - **Loom Video Walkthrough**: [Watch Video Walkthrough](https://drive.google.com/file/d/1e6pWpN1Ji88Q2ibs9DmSUSxVpqU8tt38/view?usp=sharing)
 
 ---

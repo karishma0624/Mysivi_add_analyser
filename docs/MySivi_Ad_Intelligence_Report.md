@@ -7,6 +7,7 @@
 ## Links
 - GitHub Repository: https://github.com/karishma0624/Mysivi_add_analyser
 - n8n Workflow File: n8n/mysivi-ad-scraper-workflow.json (submitted alongside this report)
+- n8n Workflow (PDF export): https://drive.google.com/file/d/1ST-UnYE0qCH1D3NLalsbZhkZ42nrPG0U/view?usp=sharing
 - Loom Video Walkthrough: https://drive.google.com/file/d/1e6pWpN1Ji88Q2ibs9DmSUSxVpqU8tt38/view?usp=sharing
 
 ---

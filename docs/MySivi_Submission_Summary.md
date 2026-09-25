@@ -9,7 +9,7 @@ Build an n8n workflow for Facebook Ad Library Scraping and analyse running ads. 
 - **GitHub Repository**: https://github.com/karishma0624/Mysivi_add_analyser.git
 - **Live Deployed App**: https://mysivi-add-analyser.vercel.app/
 - **n8n Workflow JSON**: https://drive.google.com/file/d/1YLi4GY0wZFX91vw1OgFMj3vtN1mNFKo_/view?usp=sharing
-- **n8n Workflow (PDF export)**: https://drive.google.com/file/d/1A7xjsMhS6ijx-Ve1Ic_FgjQY48MZg47o/view?usp=sharing
+- **n8n Workflow (PDF export)**: https://drive.google.com/file/d/1ST-UnYE0qCH1D3NLalsbZhkZ42nrPG0U/view?usp=sharing
 - **Loom Video Walkthrough**: https://drive.google.com/file/d/1e6pWpN1Ji88Q2ibs9DmSUSxVpqU8tt38/view?usp=sharing
 
 ## Approach
