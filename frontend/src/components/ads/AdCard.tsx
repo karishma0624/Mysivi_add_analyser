@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Layers, ExternalLink, Play, Eye, Sparkles, Award, ImageOff, CheckCircle2 } from 'lucide-react';
+import { Calendar, Layers, ExternalLink, Play, Eye, Sparkles, Award, ImageOff, CheckCircle2, X } from 'lucide-react';
 import type { AdLeaderboardRow } from '../../lib/types';
 import { calculateScoreBreakdown } from '../../lib/scoreUtils';
 
@@ -10,6 +10,8 @@ interface AdCardProps {
 
 export const AdCard: React.FC<AdCardProps> = ({ ad, onSelect }) => {
   const [imgError, setImgError] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [videoError, setVideoError] = useState(false);
   const score = calculateScoreBreakdown(ad);
 
   // Determine badge color based on rank
@@ -24,6 +26,7 @@ export const AdCard: React.FC<AdCardProps> = ({ ad, onSelect }) => {
       : 'bg-slate-100 text-slate-700 border-slate-200';
 
   const hasCreativeUrl = Boolean(ad.creative_url && ad.creative_url.trim());
+  const canPlayVideo = Boolean(ad.video_url && !videoError);
 
   return (
     <div className="group bg-white rounded-2xl border border-slate-200/80 hover:border-brand-300 hover:shadow-card-hover transition-all duration-300 flex flex-col overflow-hidden">
@@ -69,16 +72,48 @@ export const AdCard: React.FC<AdCardProps> = ({ ad, onSelect }) => {
         </div>
       </div>
 
-      {/* Creative Media Preview with Neutral Fallback (No Fake Images) */}
-      <div className="relative aspect-video w-full bg-slate-900 overflow-hidden group-hover:opacity-95 transition-opacity flex items-center justify-center">
-        {imgError || !hasCreativeUrl ? (
+      {/* Creative Media Preview with Interactive Video Playback */}
+      <div className="relative aspect-video w-full bg-slate-950 overflow-hidden flex items-center justify-center">
+        {isPlaying && canPlayVideo ? (
+          <div className="relative w-full h-full bg-black flex items-center justify-center">
+            <video
+              src={ad.video_url!}
+              poster={ad.creative_url || undefined}
+              controls
+              autoPlay
+              playsInline
+              className="w-full h-full object-contain"
+              onError={() => {
+                setVideoError(true);
+                setIsPlaying(false);
+              }}
+              onEnded={() => setIsPlaying(false)}
+            />
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsPlaying(false);
+              }}
+              className="absolute top-2 right-2 bg-black/80 hover:bg-black text-white p-1.5 rounded-full z-20 transition-transform hover:scale-110 shadow-lg border border-white/20"
+              title="Close Video"
+              aria-label="Close Video"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ) : imgError || !hasCreativeUrl ? (
           <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400 p-4 text-center select-none">
             <ImageOff className="w-7 h-7 mb-1.5 text-slate-400" />
             <span className="text-xs font-semibold text-slate-700">Creative preview unavailable</span>
             <span className="text-[10px] text-slate-400 mt-0.5">Meta CDN URL expired</span>
           </div>
         ) : (
-          <>
+          <div
+            className={`relative w-full h-full ${canPlayVideo ? 'cursor-pointer group/media' : ''}`}
+            onClick={() => {
+              if (canPlayVideo) setIsPlaying(true);
+            }}
+          >
             <img
               src={ad.creative_url!}
               alt={`MySivi Ad ${ad.library_id}`}
@@ -86,26 +121,29 @@ export const AdCard: React.FC<AdCardProps> = ({ ad, onSelect }) => {
               onError={() => setImgError(true)}
             />
 
-            {ad.creative_type === 'video' && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                <div className="w-11 h-11 rounded-full bg-white/90 text-brand flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                  <Play className="w-5 h-5 fill-current ml-0.5" />
+            {canPlayVideo && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover/media:bg-black/45 transition-colors">
+                <div className="w-13 h-13 rounded-full bg-white/95 text-brand flex items-center justify-center shadow-xl group-hover/media:scale-115 transition-transform group-hover/media:bg-white ring-4 ring-white/20">
+                  <Play className="w-6 h-6 fill-current ml-0.5 text-brand-600" />
+                </div>
+                <div className="absolute bottom-10 bg-black/85 backdrop-blur-md text-white text-[11px] font-bold px-3 py-1 rounded-full opacity-0 group-hover/media:opacity-100 transition-opacity shadow-lg">
+                  Click to Play Video
                 </div>
               </div>
             )}
-          </>
-        )}
 
-        {/* Longevity Pill */}
-        <div className="absolute bottom-2.5 left-2.5 bg-black/75 backdrop-blur-md text-white text-[11px] font-medium px-2.5 py-1 rounded-full flex items-center gap-1.5">
-          <Calendar className="w-3 h-3 text-emerald-400" />
-          <span>Active {ad.longevity_days} days</span>
-        </div>
+            {/* Longevity Pill */}
+            <div className="absolute bottom-2.5 left-2.5 bg-black/75 backdrop-blur-md text-white text-[11px] font-medium px-2.5 py-1 rounded-full flex items-center gap-1.5 pointer-events-none">
+              <Calendar className="w-3 h-3 text-emerald-400" />
+              <span>Active {ad.longevity_days} days</span>
+            </div>
 
-        {/* CTA preview tag */}
-        {ad.cta && (
-          <div className="absolute bottom-2.5 right-2.5 bg-brand text-white text-[11px] font-bold px-2.5 py-1 rounded-full shadow-md">
-            {ad.cta}
+            {/* CTA preview tag */}
+            {ad.cta && (
+              <div className="absolute bottom-2.5 right-2.5 bg-brand text-white text-[11px] font-bold px-2.5 py-1 rounded-full shadow-md pointer-events-none">
+                {ad.cta}
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -29,15 +29,18 @@ export const AdDetailModal: React.FC<AdDetailModalProps> = ({
   onAskAboutAd,
 }) => {
   const [imgError, setImgError] = useState(false);
+  const [videoError, setVideoError] = useState(false);
 
   useEffect(() => {
     setImgError(false);
+    setVideoError(false);
   }, [ad?.library_id]);
 
   if (!ad) return null;
 
   const score = calculateScoreBreakdown(ad);
   const hasCreativeUrl = Boolean(ad.creative_url && ad.creative_url.trim());
+  const canPlayVideo = Boolean(ad.video_url && !videoError);
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 lg:p-8 animate-fadeIn">
@@ -93,9 +96,19 @@ export const AdDetailModal: React.FC<AdDetailModalProps> = ({
         <div className="flex-1 overflow-y-auto p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Left Column (7 cols): Ad Creative & Raw Content */}
           <div className="lg:col-span-7 space-y-6">
-            {/* Creative Asset Container with Neutral Fallback (No Fake Images) */}
+            {/* Creative Asset Container with Playable Video or Neutral Fallback */}
             <div className="rounded-2xl overflow-hidden bg-slate-950 border border-slate-200 relative aspect-video flex items-center justify-center">
-              {imgError || !hasCreativeUrl ? (
+              {canPlayVideo ? (
+                <video
+                  src={ad.video_url!}
+                  poster={ad.creative_url || undefined}
+                  controls
+                  autoPlay
+                  playsInline
+                  className="w-full h-full object-contain bg-black"
+                  onError={() => setVideoError(true)}
+                />
+              ) : imgError || !hasCreativeUrl ? (
                 <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900/90 text-slate-300 p-8 text-center select-none">
                   <ImageOff className="w-10 h-10 mb-2 text-slate-400" />
                   <span className="text-sm font-semibold text-slate-200">Creative preview unavailable</span>
@@ -109,11 +122,11 @@ export const AdDetailModal: React.FC<AdDetailModalProps> = ({
                   onError={() => setImgError(true)}
                 />
               )}
-              <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white text-[11px] font-medium px-2.5 py-1 rounded-full">
+              <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white text-[11px] font-medium px-2.5 py-1 rounded-full pointer-events-none">
                 Type: {ad.creative_type?.toUpperCase() || 'IMAGE'}
               </div>
               {Array.isArray(ad.platforms) && ad.platforms.filter(Boolean).length > 0 && (
-                <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md text-white text-[10px] font-medium px-2.5 py-1 rounded-full">
+                <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md text-white text-[10px] font-medium px-2.5 py-1 rounded-full pointer-events-none">
                   {ad.platforms.filter(Boolean).join(', ')}
                 </div>
               )}

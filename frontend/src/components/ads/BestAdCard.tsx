@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trophy, Sparkles, Calendar, Layers, Eye, Play, ImageOff, CheckCircle2, Award } from 'lucide-react';
+import { Trophy, Sparkles, Calendar, Layers, Eye, Play, ImageOff, CheckCircle2, Award, X } from 'lucide-react';
 import type { AdLeaderboardRow } from '../../lib/types';
 import { calculateScoreBreakdown } from '../../lib/scoreUtils';
 
@@ -15,6 +15,8 @@ export const BestAdCard: React.FC<BestAdCardProps> = ({
   onAskArya,
 }) => {
   const [imgError, setImgError] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [videoError, setVideoError] = useState(false);
 
   // Render nothing when there are 0 ads
   if (!winner) {
@@ -23,6 +25,7 @@ export const BestAdCard: React.FC<BestAdCardProps> = ({
 
   const score = calculateScoreBreakdown(winner);
   const hasCreativeUrl = Boolean(winner.creative_url && winner.creative_url.trim());
+  const canPlayVideo = Boolean(winner.video_url && !videoError);
 
   return (
     <div className="relative overflow-hidden bg-gradient-to-br from-brand-900 via-brand-800 to-brand-purple rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-white/10">
@@ -64,40 +67,75 @@ export const BestAdCard: React.FC<BestAdCardProps> = ({
         {/* Left Column: Creative Asset */}
         <div className="lg:col-span-5 space-y-3">
           <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-slate-950 border border-white/20 flex items-center justify-center">
-            {imgError || !hasCreativeUrl ? (
+            {isPlaying && canPlayVideo ? (
+              <div className="relative w-full h-full bg-black flex items-center justify-center">
+                <video
+                  src={winner.video_url!}
+                  poster={winner.creative_url || undefined}
+                  controls
+                  autoPlay
+                  playsInline
+                  className="w-full h-full object-contain"
+                  onError={() => {
+                    setVideoError(true);
+                    setIsPlaying(false);
+                  }}
+                  onEnded={() => setIsPlaying(false)}
+                />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsPlaying(false);
+                  }}
+                  className="absolute top-2 right-2 bg-black/80 hover:bg-black text-white p-1.5 rounded-full z-20 transition-transform hover:scale-110 shadow-lg border border-white/20"
+                  title="Close Video"
+                  aria-label="Close Video"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : imgError || !hasCreativeUrl ? (
               <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900/80 text-slate-300 p-4 text-center select-none">
                 <ImageOff className="w-8 h-8 mb-2 text-slate-400" />
                 <span className="text-xs font-semibold text-slate-200">Creative preview unavailable</span>
                 <span className="text-[10px] text-slate-400 mt-0.5">Public Meta CDN link expired</span>
               </div>
             ) : (
-              <>
+              <div
+                className={`relative w-full h-full ${canPlayVideo ? 'cursor-pointer group/media' : ''}`}
+                onClick={() => {
+                  if (canPlayVideo) setIsPlaying(true);
+                }}
+              >
                 <img
                   src={winner.creative_url!}
                   alt={`Best Ad ${winner.library_id}`}
-                  className="w-full h-full object-cover object-center"
+                  className="w-full h-full object-cover object-center group-hover/media:scale-105 transition-transform duration-500"
                   onError={() => setImgError(true)}
                 />
-                {winner.creative_type === 'video' && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                    <div className="w-12 h-12 rounded-full bg-white/90 text-brand flex items-center justify-center shadow-lg">
-                      <Play className="w-5 h-5 fill-current ml-0.5" />
+                {canPlayVideo && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover/media:bg-black/45 transition-colors">
+                    <div className="w-13 h-13 rounded-full bg-white/95 text-brand flex items-center justify-center shadow-xl group-hover/media:scale-115 transition-transform group-hover/media:bg-white ring-4 ring-white/20">
+                      <Play className="w-6 h-6 fill-current ml-0.5 text-brand-600" />
+                    </div>
+                    <div className="absolute bottom-10 bg-black/85 backdrop-blur-md text-white text-[11px] font-bold px-3 py-1 rounded-full opacity-0 group-hover/media:opacity-100 transition-opacity shadow-lg">
+                      Click to Play Video
                     </div>
                   </div>
                 )}
-              </>
+
+                {/* Active longevity tag on creative */}
+                <div className="absolute bottom-2.5 left-2.5 bg-black/75 backdrop-blur-md text-white text-[11px] font-medium px-2.5 py-1 rounded-full flex items-center gap-1.5 pointer-events-none">
+                  <Calendar className="w-3 h-3 text-emerald-400" />
+                  <span>{winner.longevity_days} days active</span>
+                </div>
+
+                {/* Creative type pill */}
+                <div className="absolute top-2.5 right-2.5 bg-black/60 backdrop-blur-md text-white text-[10px] font-medium px-2 py-0.5 rounded-full pointer-events-none">
+                  {winner.creative_type?.toUpperCase() || 'IMAGE'}
+                </div>
+              </div>
             )}
-
-            {/* Active longevity tag on creative */}
-            <div className="absolute bottom-2.5 left-2.5 bg-black/75 backdrop-blur-md text-white text-[11px] font-medium px-2.5 py-1 rounded-full flex items-center gap-1.5">
-              <Calendar className="w-3 h-3 text-emerald-400" />
-              <span>{winner.longevity_days} days active</span>
-            </div>
-
-            {/* Creative type pill */}
-            <div className="absolute top-2.5 right-2.5 bg-black/60 backdrop-blur-md text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
-              {winner.creative_type?.toUpperCase() || 'IMAGE'}
-            </div>
           </div>
 
           {/* CTA Display */}

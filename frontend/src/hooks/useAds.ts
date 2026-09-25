@@ -29,7 +29,35 @@ export function useAds() {
         throw adsError;
       }
 
-      setAds(adsData || []);
+      // 2. Fetch raw snapshots to extract playable video URLs
+      const { data: rawSnapshots } = await supabase
+        .from('ads')
+        .select('library_id, raw_snapshot');
+
+      const videoMap = new Map<string, string>();
+      if (rawSnapshots) {
+        for (const row of rawSnapshots) {
+          const s = row.raw_snapshot?.snapshot;
+          if (s) {
+            const vUrl =
+              s.videos?.[0]?.videoHdUrl ||
+              s.videos?.[0]?.videoSdUrl ||
+              s.cards?.[0]?.videoHdUrl ||
+              s.cards?.[0]?.videoSdUrl ||
+              null;
+            if (vUrl) {
+              videoMap.set(row.library_id, vUrl);
+            }
+          }
+        }
+      }
+
+      const mergedAds: AdLeaderboardRow[] = (adsData || []).map((ad: any) => ({
+        ...ad,
+        video_url: videoMap.get(ad.library_id) || ad.video_url || null,
+      }));
+
+      setAds(mergedAds);
 
       // 2. Fetch static metrics framework
       const { data: metricsData, error: metricsError } = await supabase

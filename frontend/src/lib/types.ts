@@ -55,6 +55,7 @@ export interface AdLeaderboardRow {
   ad_id: string;
   library_id: string;
   creative_url?: string | null;
+  video_url?: string | null;
   creative_type: 'image' | 'video';
   platforms?: string[] | null;
   is_active: boolean;
