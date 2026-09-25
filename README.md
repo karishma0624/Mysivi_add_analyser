@@ -1,223 +1,167 @@
-# MySivi Ad Intelligence Platform
+# MySivi Facebook Ad Intelligence & RAG Platform
 
-> A full-stack, 4-tier Ad Intelligence web application branded after **[mysivi.ai](https://mysivi.ai)**.
-> Engineered with an automated **n8n** scraping pipeline (14-item flow), **Google Gemini 3.5 Flash Lite** creative evaluation, a **3-Signal Proxy Scoring Model**, **Supabase pgvector (HNSW)** storage, and a grounded **RAG chatbot ("Arya")**.
-> **100% Free-Tier Architecture ($0 to deploy and operate).**
+> An end-to-end, automated ad intelligence system that scrapes, evaluates, and ranks real Meta Ad Library creatives for MySivi using an n8n pipeline, Google Gemini AI, Supabase vector embeddings, and an interactive RAG performance strategist.
 
 ---
 
-## Architecture Overview
+## Assignment Context
 
-```
-                    ┌───────────────────────────────────────────────┐
-                    │  1. Ingestion: n8n Workflow (14 Items)        │
-                    │     • Apify Meta Ad Library Scraper           │
-                    │       (keyword_exact_phrase "MySivi", IN, act)│
-                    │     • Normalize payload, dates, longevity     │
-                    │     • If: Skip ads with no text copy          │
-                    │     • Paced HTTP batching (7s) & retries      │
-                    └───────────────────────┬───────────────────────┘
-                                            │
-                    ┌───────────────────────▼───────────────────────┐
-                    │  2. Reasoning & Embedding: Google Gemini API  │
-                    │     • n8n: gemini-3.5-flash-lite (minimal)    │
-                    │     • n8n embed: taskType RETRIEVAL_DOCUMENT  │
-                    │       (outputDimensionality: 768)             │
-                    │     • Chat: Model set in Edge Function        │
-                    │     • Chat embed: taskType RETRIEVAL_QUERY    │
-                    └───────────────────────┬───────────────────────┘
-                                            │
-                    ┌───────────────────────▼───────────────────────┐
-                    │  3. Database & Vectors: Supabase              │
-                    │     • Postgres: advertisers, ads, analysis    │
-                    │     • pgvector: HNSW index (vector_cosine_ops)│
-                    │     • is_mysivi_page dynamic derivation flag  │
-                    │     • Idempotent ON CONFLICT DO UPDATE RPCs   │
-                    │     • Edge Function /chat: RAG retrieval      │
-                    └───────────────────────┬───────────────────────┘
-                                            │
-                    ┌───────────────────────▼───────────────────────┐
-                    │  4. Presentation: React 18 + TS + Tailwind    │
-                    │     • mysivi.ai royal indigo / purple branding│
-                    │     • Rank #1 "Best Ad" Highlight Card        │
-                    │     • Neutral "Creative preview unavailable"  │
-                    │     • Leaderboard with proxy score footnote   │
-                    │     • Arya Grounded RAG Chatbot Widget        │
-                    └───────────────────────────────────────────────┘
+This project delivers an automated n8n workflow and web application to scrape and analyze active Meta Ad Library advertisements for **MySivi** (an AI English-speaking practice app), extract structured marketing copy (hook, body, CTA, and offer details), and programmatically identify the #1 top-performing ad using an objective proxy scoring framework.
+
+The exact Meta Ad Library source query used is:
+```text
+https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=IN&is_targeted_country=false&media_type=all&q=%22MySivi%22&search_type=keyword_exact_phrase&sort_data[direction]=desc&sort_data[mode]=total_impressions
 ```
 
 ---
 
-## Key Features
+## Architecture
 
-1. **Brand-Aligned UI/UX**: Matches [mysivi.ai](https://mysivi.ai)'s clean rounded aesthetic, royal indigo `#4F46E5` to purple `#7C3AED` gradients, and subtle micro-interactions.
-2. **Rank #1 "Best Ad" Highlight Card**:
-   - Prominently showcases the top-ranked creative on both **Home** and **Leaderboard**.
-   - Displays creative asset, hook, body, CTA, composite score, the 3 weighted components, and Gemini's strategic evaluation rationale.
-   - Automatically renders nothing when 0 ads exist.
-3. **Honest 3-Signal Proxy Scoring Model**:
-   $$\text{Composite} = 0.40 \times \text{Creative Quality} + 0.35 \times \text{Longevity} + 0.25 \times \text{Iteration}$$
-   - **Longevity (35%)**: Normalized to 0–1 against a 90-day benchmark: $\min(\text{days}/90, 1)$.
-   - **Iteration (25%)**: Normalized to 0–1 using Apify `collationCount`: $\min((\text{collationCount}-1)/4, 1)$ or `has_multiple_versions` as 1/0.
-   - **Creative Quality (40%)**: Evaluated by Gemini 3.5 Flash Lite across 5 sub-scores (0–10 scale: Hook, Clarity, CTA, Visual Appeal, and Offer Strength) and normalized to 0–1: $\text{avg}(\text{subscores})/10$.
-   - **Composite Score**: Normalized 0–1 scale.
-4. **Pure Real Data Flow & Neutral Asset Error Handling**:
-   - Only displays ads scraped from Meta Ad Library and stored in Supabase.
-   - When Meta CDN URLs expire, cards display a neutral `"Creative preview unavailable"` tile instead of fake Unsplash placeholders.
-   - Displays a clear page ownership badge: `"MySivi page"` vs. `"Third-party page"` derived from `is_mysivi_page`.
-   - When database has 0 ads, the Home counter reads `0` and shows an honest empty state instructing the user to run the n8n workflow.
-   - Includes the transparent leaderboard footnote: *"Scores are a proxy from public Ad Library data. Impressions, CTR and ROAS are not public."*
-5. **"Ask Arya" RAG Chatbot**:
-   - Floating AI assistant styled after MySivi's proprietary tutor persona ("Arya").
-   - Embeds queries via `gemini-embedding-001` (768-dim, `taskType: "RETRIEVAL_QUERY"`), searches Supabase with `match_ad_embeddings` cosine similarity using an HNSW index, and generates grounded answers citing specific Library IDs, hooks, and composite scores without guessing impressions or spend.
-6. **Meta Ads Manager Metrics Framework**:
-   - Dedicated dashboard panel presenting 20 growth metrics across Attention, Engagement, Conversion, Cost & ROI, and Reach, clearly labeled *"Tracked once connected to Meta Ads Manager API"*.
+```mermaid
+graph LR
+    A[Meta Ad Library] --> B[Apify Actor: facebook-ads-scraper]
+    B --> C[n8n 14-Node Workflow Engine]
+    C --> D[Google Gemini 3.5 Flash Lite & Embeddings]
+    D --> E[(Supabase PostgreSQL + pgvector)]
+    E --> F[React 18 + TypeScript + Vite]
+    E --> G[Arya RAG Performance Strategist]
+    F <--> G
+```
 
 ---
 
-## The n8n Pipeline & True Node Flow
+## Final n8n Workflow (14 Nodes)
 
-### True Flow Architecture
-- **Exact Assignment Scrape URL**: Apify input targets the exact assignment search query URL (`keyword_exact_phrase` search for `"MySivi"`, status `"active"`, country `"IN"`, max 25 results) rather than an advertiser page. This captures all active campaigns mentioning MySivi across the public library.
-- **Model Configuration**: n8n uses **`gemini-3.5-flash-lite`** with `thinkingLevel: "minimal"` for extraction and creative evaluation (`gemini-2.5-flash-lite` is closed to new users). Chat uses the model configured in the Edge Function.
-- **Asymmetric Vector Embeddings**: Vectors are generated with `gemini-embedding-001` with `outputDimensionality: 768`. n8n uses `taskType: "RETRIEVAL_DOCUMENT"`, and the Edge Function uses `taskType: "RETRIEVAL_QUERY"`.
-- **Vector Verification & Pacing**: A dedicated verification node checks that embedding arrays strictly match 768 dimensions before inserting into Supabase. Requests are paced with 7-second batching intervals and 5 retries to respect Gemini free-tier rate limits.
+The ingestion engine ([`n8n/mysivi-ad-scraper-workflow.json`](n8n/mysivi-ad-scraper-workflow.json)) operates as an automated, paced 14-item pipeline in exact sequential execution order:
 
-### Step-by-Step Node Execution Sequence (14 Items)
-
-1. **Trigger (Manual / Scheduled)**: Initiates automated execution on-demand. *(Weekly schedule optional, disabled by default).*
-2. **Apify: Scrape Meta Ad Library (HTTP Request Node)**: Scrapes Facebook Ad Library using the exact assignment query URL (`keyword_exact_phrase` search for `"MySivi"` with active status in India).
-3. **Normalize Ad Payload (Code Node)**: Formats fields, calculates longevity days, and structures snapshots.
-4. **If (If Node)**: Filters out ads without valid text copy; nothing is invented or assumed for them.
-5. **Gemini: Extract Hook, Body, CTA (HTTP Request Node)**: Extracts structured copy using `gemini-3.5-flash-lite` (with `thinkingLevel: "minimal"`). HTTP batching (7-second interval) handles rate limits.
-6. **Parse Extracted JSON (Code Node)**: Cleans and validates extracted JSON, setting error flags if extraction fails without inventing fake fields.
-7. **Gemini: Evaluate Creative Scores (HTTP Request Node)**: Grades the ad across 5 quality sub-scores (0–10 scale) and writes an executive evaluation rationale.
-8. **Compute Composite Proxy Score (Code Node)**: Computes 0–1 normalized proxy scores ($0.40 \times \text{Creative} + 0.35 \times \text{Longevity} + 0.25 \times \text{Iteration}$).
-9. **Gemini: Generate Embedding (HTTP Request Node)**: Generates 768-dimensional embeddings via `gemini-embedding-001` with `taskType: "RETRIEVAL_DOCUMENT"` and `outputDimensionality: 768`.
-10. **Verify Embedding Dimension (Code Node)**: Verifies vector dimensions and skips any vector that is not 768-dim.
-11. **Supabase: Upsert Ad & Scores (HTTP Request Node)**: Calls `public.upsert_ad_pipeline_record` passing all 28 parameters, sets `is_mysivi_page` dynamically, and updates records idempotently via `ON CONFLICT (...) DO UPDATE`.
-12. **Supabase: Store Vector Embedding (HTTP Request Node)**: Calls `public.upsert_ad_embedding` to upsert verified 768-dim vectors into `ad_embeddings` idempotently keyed on `library_id`.
-13. **Supabase: Recalculate Leaderboard Ranks (HTTP Request Node)**: Calls `public.recalculate_ad_ranks` (configured with `executeOnce: true`) to update dense ranks deterministically.
-14. **Summarize Run (Code Node)**: Compiles real execution statistics (total processed, failed, top-ranked ad) without synthetic metrics.
+1. **Manual Run Trigger** (with optional disabled Weekly Schedule): Initiates the scraping job on-demand or on a scheduled cadence.
+2. **Apify: Scrape Meta Ad Library**: Executes the `apify/facebook-ads-scraper` actor targeting active Indian ads with keyword `"MySivi"`.
+3. **Normalize Ad Payload**: Standardizes raw Meta payloads, computes running longevity days, maps creative media, and formats timestamps.
+4. **If (Text Validation Filter)**: Evaluates raw copy text and skips empty-text ads to ensure nothing is invented or hallucinated.
+5. **Gemini: Extract Hook, Body, CTA**: Calls `gemini-3.5-flash-lite` with minimal thinkingLevel to parse hooks, primary body copy, explicit CTAs, and promotional offers.
+6. **Parse Extracted JSON**: Validates and serializes the structured JSON response returned by the extraction model.
+7. **Gemini: Evaluate Creative Scores**: Prompts `gemini-3.5-flash-lite` to score 5 creative dimensions (Hook, Clarity, CTA Strength, Visual Appeal, Offer Strength) on a 0–10 scale.
+8. **Compute Composite Proxy Score**: Merges scores into the deterministic formula (40% Creative Quality + 35% Longevity + 25% Iteration signal).
+9. **Gemini: Generate Embedding**: Generates a 768-dimensional vector representation using `gemini-embedding-001` with `taskType: RETRIEVAL_DOCUMENT`.
+10. **Verify Embedding Dimension**: Verifies that the returned vector contains exactly 768 dimensions before writing to storage.
+11. **Supabase: Upsert Ad & Scores**: Idempotently upserts creative metadata, extracted copy, and calculated scores into `ads`, `ad_analysis`, and `ad_scores`.
+12. **Supabase: Store Vector Embedding**: Inserts the validated 768-dim embedding into `ad_embeddings` with an HNSW cosine similarity index.
+13. **Supabase: Recalculate Leaderboard Ranks**: Calls the `recalculate_ad_ranks` database function (executed once per pipeline run) to re-index all rankings.
+14. **Summarize Run**: Computes batch execution summary metrics (`total_ads_processed`, `ads_failed`, `top_ranked_ad`).
 
 ---
 
-## System Limitations & Methodological Constraints
+## Scoring Model
 
-1. **Proxy Scoring Heuristic**: Because Meta does not disclose private conversion events, the composite ranking is an empirical proxy model (Longevity + Iteration + AI Creative Quality) rather than direct revenue attribution.
-2. **No Public Impressions, CTR, or Spend**: Public Meta Ad Library data does not expose impressions, spend, CPC, CPM, or ROAS for commercial app-install campaigns.
-3. **Ads Without Text Are Not Scored**: The If node skips ads lacking text copy; nothing is invented or assumed for them.
-4. **Rate Limit Handling**: Gemini free-tier rate limits are handled through 7-second batching intervals and automatic retries.
-5. **Exact Phrase Keyword Search & Third-Party Pages**: Searching for 'MySivi' means third-party or affiliate pages can appear; they are clearly flagged with a distinct badge.
-6. **Expiring Creative Media URLs**: Temporary CDN URLs (`fbcdn.net`) expire over time. The frontend safely handles this with neutral `"Creative preview unavailable"` tiles.
-7. **Visual Subscore Inferred from Copy & Metadata**: Under free-tier execution, Gemini grades visual appeal using ad copy framing, creative type, and snapshot metadata rather than full-frame multimodal video rendering.
+$$\text{Composite Score} = 0.40 \times \text{Creative Quality} + 0.35 \times \text{Longevity} + 0.25 \times \text{Iteration}$$
 
----
+- **Creative Quality (40% weight)**: The normalized average of five 0–10 Gemini subscores (Hook, Clarity, CTA Strength, Visual Appeal, and Offer Strength) measuring copy persuasion and message relevance.
+- **Longevity Signal (35% weight)**: Measures how many days an ad has continuously survived in auction normalized against a 90-day threshold ($\min(\text{days}/90, 1)$), reflecting advertiser willingness to maintain budget behind profitable creative.
+- **Iteration Signal (25% weight)**: Measures active creative testing by rewarding creatives deployed with multiple active versions (`has_multiple_versions`).
 
-## The #1 "Best Ad" (Live Execution Results)
+> **Note on Public Meta Ad Library Data**: Public Meta Ad Library data does not expose private auction metrics (impressions, click-through rate / CTR, cost per click / CPC, CPM, or spend) for commercial app-install campaigns. Consequently, this deterministic proxy model combines longevity, variant iteration, and AI creative evaluation to identify proven winners without guessing private data.
 
-Populate the placeholders below directly from your live workflow execution run:
-
-- **Total Ingested Ads**: `28`
+### Top-Ranked Winning Ad (#1)
 - **Library ID**: `1647671449602821`
-- **Advertiser Page**: `MySivi`
-- **Page Ownership**: `MySivi page` (`is_mysivi_page: true`)
-- **Winning Hook**: `"हुशारीनं शिका, कष्ट न करता!"`
-- **Primary Body**: `"MySivi AI सोबत खरी English बोलायची प्रॅक्टिस करा."`
-- **Call to Action (CTA)**: `आजच ट्रायल सुरू करा`
-- **Offer / Pricing**: `₹1/- ला`
-- **Active Longevity**: `186` days active in auction
-- **Composite Proxy Score (0–1)**: `0.8900` (89.0 / 100, Rank #1)
-  - **Creative Quality (40%, 0–1)**: `0.7200` (from 5 subscores: Hook 7/10, Clarity 8/10, CTA 7/10, Visual 5/10, Offer 9/10)
-  - **Longevity Score (35%, 0–1)**: `1.0000` (`186` days / 90)
-  - **Iteration Score (25%, 0–1)**: `1.0000` (Multiple versions active)
-- **Gemini Strategic Rationale**: `"The Marathi hook effectively targets a pain point by promising smart learning over hard work, driving good local relevance. The value proposition and AI-driven English practice are clearly articulated in the body text. The ₹1 trial offer is exceptionally compelling and lowers the barrier to entry significantly, while the CTA is direct and actionable."`
-- **Why It Won**: Ad `1647671449602821` achieved Rank #1 by combining maximum auction longevity (186 days active, normalized to 1.0) and variant testing (1.0 iteration) with a strong 0.72 creative score driven by a standout 9/10 offer strength (₹1 trial) and native Marathi hook, producing a winning composite proxy score of 0.8900 (89.0/100).
+- **Extracted Hook**: *"हुशारीनं शिका, कष्ट न करता!"* (Marathi)
+- **Composite Score**: **88.8 / 100** (Creative: 28.8 pts | Longevity: 35.0 pts | Iteration: 25.0 pts)
+- **Longevity**: Active for **186 days** with multiple active variants.
 
 ---
 
-## Repository Structure
+## Tech Stack
 
-```
-mysivi-ad-intelligence/
-├── frontend/                                # React 18 + TS + Vite + Tailwind web app
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── layout/                      # Navbar & Footer matching mysivi.ai
-│   │   │   ├── ads/                         # BestAdCard, AdCard, AdGallery, AdDetailModal
-│   │   │   ├── dashboard/                   # Leaderboard, MetricsFramework, ScoreBreakdownChart
-│   │   │   └── chat/                        # ChatWidget ("Ask Arya") & ChatMessage
-│   │   ├── pages/                           # Home, Methodology
-│   │   ├── hooks/                           # useAds (Supabase query), useChat (Edge Fn invoke)
-│   │   └── lib/                             # supabaseClient, types
-│   ├── package.json
-│   ├── vite.config.ts
-│   └── tailwind.config.ts
-│
-├── supabase/
-│   ├── migrations/
-│   │   ├── 0001_init.sql                    # Base schema: advertisers, ads, analysis, scores
-│   │   └── 0002_fixes.sql                   # HNSW index, unique constraints, is_mysivi_page, idempotent RPCs, RLS
-│   └── functions/
-│       └── chat/
-│           └── index.ts                     # Deno Edge Function (768-dim RAG + Gemini 2.5)
-│
-├── n8n/
-│   └── mysivi-ad-scraper-workflow.json      # Pipeline ready for n8n import
-│
-├── docs/
-│   ├── MySivi_Ad_Intelligence_Report.md     # Technical report & methodology
-│   └── loom_script.md                       # 5-minute video presentation script
-│
-├── .env.example                             # Environment variable template
-├── .gitignore                               # Protects credentials (.env, .env.local)
-└── README.md
+- **Workflow Orchestration**: [n8n](https://n8n.io/) (14-item paced linear flow, 7s batch interval, error triggers).
+- **Data Extraction**: [Apify](https://apify.com/) (`apify/facebook-ads-scraper` actor).
+- **Artificial Intelligence**:
+  - `gemini-3.5-flash-lite`: Used for copy extraction and scoring (with `thinkingLevel: "minimal"`). Avoided `gemini-2.5-flash-lite` as it is closed to new users.
+  - `gemini-embedding-001`: Generates 768-dimensional embeddings (`taskType: RETRIEVAL_DOCUMENT` in n8n; `RETRIEVAL_QUERY` in Edge Function).
+- **Database & Vector Search**: [Supabase](https://supabase.com/) (PostgreSQL 15, `pgvector` HNSW cosine indexing, and Edge Functions).
+- **Frontend Web Application**: React 18, TypeScript, Vite, Tailwind CSS, Lucide Icons.
+
+---
+
+## Live Demo & Screenshots
+
+- **Deployed Live URL**: **[https://mysivi-add-analyser.vercel.app/](https://mysivi-add-analyser.vercel.app/)**
+
+### 1. n8n 14-Node Ingestion & AI Scoring Pipeline
+![n8n Workflow Canvas](docs/screenshots/01_n8n_workflow_canvas.png)
+
+### 2. Execution Summary (25 Ads Processed, 0 Failures)
+![n8n Execution Summary](docs/screenshots/02_n8n_execution_summary.png)
+
+### 3. Leaderboard & #1 Winning Ad Spotlight
+![Leaderboard & Best Ad](docs/screenshots/03_leaderboard_best_ad.png)
+
+### 4. Ad Gallery with One-Click Video Playback
+![Ad Gallery with Video Playback](docs/screenshots/04_ad_gallery_playback.png)
+
+### 5. Arya Grounded RAG Performance Strategist
+![Arya RAG Assistant](docs/screenshots/05_arya_rag_chat.png)
+
+---
+
+## Quickstart
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/karishma0624/Mysivi_add_analyser.git
+cd Mysivi_add_analyser
 ```
 
----
+### 2. Configure Environment Variables
+Create `.env` in the root and `frontend/.env.local` in the frontend directory. Only provide variable names:
 
-## Quickstart & Setup Guide
+**Root `.env` (for n8n and Supabase Edge Functions)**:
+```env
+APIFY_API_TOKEN=
+GEMINI_API_KEY=
+GEMINI_CHAT_MODEL=gemini-3.5-flash-lite
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+```
 
-### 1. Database Setup (Supabase)
-1. Create a free project at [supabase.com](https://supabase.com).
-2. In **SQL Editor**, run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql) followed by [`supabase/migrations/0002_fixes.sql`](supabase/migrations/0002_fixes.sql).
-3. Deploy the Edge Function:
-   ```bash
-   supabase functions deploy chat
-   supabase secrets set GEMINI_API_KEY=your-gemini-key SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-   ```
+**Frontend `frontend/.env.local` (Client-safe public variables only)**:
+```env
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+```
 
-### 2. Automation Setup (n8n)
-1. In n8n, click **Add Workflow** &rarr; **Import from File** and select [`n8n/mysivi-ad-scraper-workflow.json`](n8n/mysivi-ad-scraper-workflow.json).
-2. Configure credentials in n8n (`APIFY_API_TOKEN`, `GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`).
-3. Click **Execute Workflow** to scrape real MySivi ads and populate Supabase.
-
-### 3. Frontend Web App Setup
-1. Open a terminal in the `frontend` directory:
-   ```bash
-   cd frontend
-   npm install
-   ```
-2. Configure `frontend/.env.local`:
-   ```bash
-   VITE_SUPABASE_URL=https://your-project-ref.supabase.co
-   VITE_SUPABASE_ANON_KEY=your-anon-key
-   ```
-3. Run locally:
-   ```bash
-   npm run dev
-   ```
-4. Build for production:
-   ```bash
-   npm run build
-   ```
+### 3. Run the Frontend Locally
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---
 
-## Free-Tier Deployment Targets ($0 Cost)
+## Known Limitations
 
-- **Frontend:** Vercel or Netlify (Free Tier)
-- **Database & RAG:** Supabase (Free Tier: 500MB DB, 50k MAU, pgvector with HNSW index)
-- **AI Models:** Google AI Studio Gemini API (`gemini-3.5-flash-lite` & `gemini-embedding-001` free tier)
-- **Scraper:** Apify ($5/month free platform credit covers ~1,000 ad records)
-- **Automation:** n8n Cloud (Free trial) or Self-Hosted Docker ($0)
+1. **Proxy Scoring vs. Private Meta Metrics**: Ranks are based on observable proxy signals (creative quality, longevity, and iteration) rather than internal conversion tracking, as Meta does not publicly expose auction revenue data.
+2. **No Public Impressions, Spend, or CTR**: Public Meta Ad Library data strictly restricts impressions and spend metrics to political and issue-based ads; commercial EdTech app-install ads do not include these values.
+3. **Facebook CDN Creative URLs Expire**: Public CDN media links (`scontent.xx.fbcdn.net`) expire over time, requiring periodic pipeline re-runs to refresh cached preview URLs.
+4. **Text-Inferred Visual Appeal Subscore**: Visual appeal is scored by Gemini from parsed copy cues and creative format structure rather than raw video computer vision analysis.
+
+---
+
+## Future Enhancements
+
+- **Real Meta Ads Manager API Integration**: Direct OAuth integration once advertiser access is granted to cross-validate proxy scores against verified ROAS, CPC, and CTR figures.
+- **Content-Hash Caching in n8n**: SHA-256 copy hashing in the n8n pipeline to skip redundant Gemini extraction calls on unchanged ads while preserving dynamic longevity recalculation.
+- **Historical Score Tracking Over Time**: Tracking weekly trajectory trends per creative to alert marketers when ad fatigue sets in.
+- **Multimodal Visual Scoring**: Ingesting raw MP4 video frames and creative image files directly into Gemini multimodal vision for computer-vision creative audits.
+
+---
+
+## Deliverables
+
+- **n8n Workflow JSON**: [`n8n/mysivi-ad-scraper-workflow.json`](n8n/mysivi-ad-scraper-workflow.json)
+- **Ad Intelligence Report**: [`docs/MySivi_Ad_Intelligence_Report.md`](docs/MySivi_Ad_Intelligence_Report.md)
+- **Loom Video Walkthrough**: `[LOOM_VIDEO_LINK_HERE]`
+
+---
+
+**GitHub Repository**: [https://github.com/karishma0624/Mysivi_add_analyser](https://github.com/karishma0624/Mysivi_add_analyser)
