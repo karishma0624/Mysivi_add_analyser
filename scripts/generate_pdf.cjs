@@ -25,7 +25,7 @@ const fullHtml = `<!DOCTYPE html>
   <style>
     @page {
       size: A4;
-      margin: 18mm 16mm;
+      margin: 0.75in;
     }
     *, *:before, *:after {
       box-sizing: border-box;
@@ -33,7 +33,7 @@ const fullHtml = `<!DOCTYPE html>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       color: #1e293b;
-      line-height: 1.5;
+      line-height: 1.65;
       font-size: 11.5pt;
       background: #ffffff;
       margin: 0;
@@ -42,34 +42,27 @@ const fullHtml = `<!DOCTYPE html>
     h1 {
       font-size: 18pt;
       color: #1e1b4b;
-      border-bottom: 2.5px solid #4f46e5;
+      border-bottom: 2px solid #4f46e5;
       padding-bottom: 6px;
       margin-top: 0;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
       page-break-after: avoid;
     }
     h2 {
-      font-size: 14pt;
+      font-size: 13.5pt;
       color: #312e81;
-      border-bottom: 1px solid #cbd5e1;
+      border-bottom: 1px solid #e2e8f0;
       padding-bottom: 4px;
-      margin-top: 20px;
+      margin-top: 22px;
       margin-bottom: 10px;
-      page-break-after: avoid;
-    }
-    h3 {
-      font-size: 12pt;
-      color: #4338ca;
-      margin-top: 14px;
-      margin-bottom: 6px;
       page-break-after: avoid;
     }
     p, ul, ol {
       margin-top: 6px;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
     li {
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
     strong {
       color: #0f172a;
