@@ -4,6 +4,14 @@
 
 ---
 
+## Links
+- GitHub Repository: https://github.com/karishma0624/Mysivi_add_analyser.git
+- Live Deployed App: https://mysivi-add-analyser.vercel.app/
+- n8n Workflow JSON: https://drive.google.com/file/d/1YLi4GY0wZFX91vw1OgFMj3vtN1mNFKo_/view?usp=sharing
+- Loom Video Walkthrough: https://drive.google.com/file/d/1e6pWpN1Ji88Q2ibs9DmSUSxVpqU8tt38/view?usp=sharing
+
+---
+
 ## Assignment Context
 
 This project delivers an automated n8n workflow and web application to scrape and analyze active Meta Ad Library advertisements for **MySivi** (an AI English-speaking practice app), extract structured marketing copy (hook, body, CTA, and offer details), and programmatically identify the #1 top-performing ad using an objective proxy scoring framework.
@@ -161,7 +169,7 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 - **n8n Workflow JSON**: [`n8n/mysivi-ad-scraper-workflow.json`](n8n/mysivi-ad-scraper-workflow.json)
 - **Executive Ad Intelligence Report (PDF)**: [`docs/MySivi_Ad_Intelligence_Report.pdf`](docs/MySivi_Ad_Intelligence_Report.pdf)
 - **Technical Methodology Report (Markdown)**: [`docs/MySivi_Ad_Intelligence_Report.md`](docs/MySivi_Ad_Intelligence_Report.md)
-- **Loom Video Walkthrough**: `[LOOM_VIDEO_LINK_HERE]`
+- **Loom Video Walkthrough**: [Watch Video Walkthrough](https://drive.google.com/file/d/1e6pWpN1Ji88Q2ibs9DmSUSxVpqU8tt38/view?usp=sharing)
 
 ---
 
