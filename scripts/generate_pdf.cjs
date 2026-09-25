@@ -3,9 +3,13 @@ const path = require('path');
 const { execSync } = require('child_process');
 const { marked } = require('../frontend/node_modules/marked');
 
-const mdPath = path.resolve(__dirname, '../docs/MySivi_Ad_Intelligence_Report.md');
-const pdfPath = path.resolve(__dirname, '../docs/MySivi_Ad_Intelligence_Report.pdf');
-const htmlTempPath = path.resolve(__dirname, '../docs/report_temp.html');
+const mdPath = process.argv[2]
+  ? path.resolve(process.argv[2])
+  : path.resolve(__dirname, '../docs/MySivi_Ad_Intelligence_Report.md');
+const pdfPath = process.argv[3]
+  ? path.resolve(process.argv[3])
+  : path.resolve(__dirname, '../docs/MySivi_Ad_Intelligence_Report.pdf');
+const htmlTempPath = path.resolve(path.dirname(pdfPath), `temp_${Date.now()}.html`);
 
 const mdContent = fs.readFileSync(mdPath, 'utf-8');
 
@@ -17,7 +21,7 @@ const fullHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>MySivi Ad Intelligence Platform — Technical Methodology & Executive Report</title>
+  <title>MySivi Submission Report</title>
   <style>
     @page {
       size: A4;
