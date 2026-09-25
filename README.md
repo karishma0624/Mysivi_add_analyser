@@ -166,9 +166,10 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ## Deliverables
 
-- **n8n Workflow JSON**: [`n8n/mysivi-ad-scraper-workflow.json`](n8n/mysivi-ad-scraper-workflow.json)
-- **Executive Ad Intelligence Report (PDF)**: [`docs/MySivi_Ad_Intelligence_Report.pdf`](docs/MySivi_Ad_Intelligence_Report.pdf)
+- **Assignment Submission Summary (PDF - 2 Pages)**: [`docs/MySivi_Submission_Summary.pdf`](docs/MySivi_Submission_Summary.pdf)
+- **Technical Methodology & Case Study (PDF - 10 Pages)**: [`docs/MySivi_Ad_Intelligence_Report.pdf`](docs/MySivi_Ad_Intelligence_Report.pdf)
 - **Technical Methodology Report (Markdown)**: [`docs/MySivi_Ad_Intelligence_Report.md`](docs/MySivi_Ad_Intelligence_Report.md)
+- **n8n Workflow JSON**: [`n8n/mysivi-ad-scraper-workflow.json`](n8n/mysivi-ad-scraper-workflow.json)
 - **Loom Video Walkthrough**: [Watch Video Walkthrough](https://drive.google.com/file/d/1e6pWpN1Ji88Q2ibs9DmSUSxVpqU8tt38/view?usp=sharing)
 
 ---
