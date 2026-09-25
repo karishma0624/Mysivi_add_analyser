@@ -200,6 +200,20 @@ when (old.page_name is distinct from new.page_name)
 execute function public.trg_fn_sync_advertiser_mysivi_flag();
 
 -- ----------------------------------------------------------------------------
+-- 3b. SCORE COLUMN PRECISION: Ensure columns hold 0-1 scale with 4 decimals
+-- Subscores are 0-10 (numeric(4,2)). Stored component scores and composite_score
+-- are stored on a 0-1 scale (4 decimals) and need numeric(7,4) to prevent rounding.
+-- ----------------------------------------------------------------------------
+alter table public.ad_analysis
+  alter column creative_quality_score type numeric(7,4);
+
+alter table public.ad_scores
+  alter column creative_quality_score type numeric(7,4),
+  alter column longevity_score type numeric(7,4),
+  alter column iteration_score type numeric(7,4),
+  alter column composite_score type numeric(7,4);
+
+-- ----------------------------------------------------------------------------
 -- 4. LEADERBOARD VIEW: Expose is_mysivi_page in public.v_ad_leaderboard
 -- ----------------------------------------------------------------------------
 drop view if exists public.v_ad_leaderboard cascade;

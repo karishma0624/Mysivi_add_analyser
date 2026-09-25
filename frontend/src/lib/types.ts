@@ -54,9 +54,9 @@ export interface AdScore {
 export interface AdLeaderboardRow {
   ad_id: string;
   library_id: string;
-  creative_url: string;
+  creative_url?: string | null;
   creative_type: 'image' | 'video';
-  platforms?: string[];
+  platforms?: string[] | null;
   is_active: boolean;
   started_running_on: string;
   has_multiple_versions: boolean;
@@ -64,7 +64,7 @@ export interface AdLeaderboardRow {
   body: string;
   cta: string;
   offer_details?: string | null;
-  hashtags?: string[];
+  hashtags?: string[] | null;
   hook_score: number;
   clarity_score: number;
   cta_strength_score: number;
@@ -80,6 +80,7 @@ export interface AdLeaderboardRow {
   page_name?: string;
   follower_count?: number;
   advertiser_category?: string;
+  is_mysivi_page?: boolean;
 }
 
 export interface MetricsFrameworkItem {

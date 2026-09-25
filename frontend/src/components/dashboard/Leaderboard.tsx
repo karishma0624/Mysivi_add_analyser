@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Trophy, Award, Sparkles, Calendar, Layers, Eye, HelpCircle, Workflow } from 'lucide-react';
+import { Trophy, Award, Sparkles, Calendar, Layers, Eye, HelpCircle, Workflow, ImageOff, CheckCircle2 } from 'lucide-react';
 import type { AdLeaderboardRow } from '../../lib/types';
+import { calculateScoreBreakdown } from '../../lib/scoreUtils';
 import { ScoreBreakdownChart } from './ScoreBreakdownChart';
 import { AdDetailModal } from '../ads/AdDetailModal';
+import { BestAdCard } from '../ads/BestAdCard';
 
 interface LeaderboardProps {
   ads: AdLeaderboardRow[];
@@ -50,13 +52,13 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
 
         <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 text-left max-w-xl mx-auto space-y-3">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">
-            How the Best Ad is Ranked:
+            How the Best Ad is Ranked (0-100 Score):
           </span>
           <div className="text-xs text-slate-600 font-mono space-y-1">
-            <div>Composite Score =</div>
-            <div>&nbsp;&nbsp;+ 0.40 × Gemini Creative Quality (Hook, Clarity, CTA, Visual, Offer)</div>
-            <div>&nbsp;&nbsp;+ 0.35 × Longevity (Days survived in Meta auction)</div>
-            <div>&nbsp;&nbsp;+ 0.25 × Iteration (Active variant testing signal)</div>
+            <div>Composite Score (0-100) =</div>
+            <div>&nbsp;&nbsp;+ 0.40 × Creative Quality × 100 (Max 40 pts; 5 subscores 0-10)</div>
+            <div>&nbsp;&nbsp;+ 0.35 × Longevity × 100 (Max 35 pts; days active / 90)</div>
+            <div>&nbsp;&nbsp;+ 0.25 × Iteration × 100 (Max 25 pts; variant testing)</div>
           </div>
         </div>
 
@@ -76,80 +78,13 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
 
   return (
     <div className="space-y-8">
-      {/* Winning Creative Hero Banner */}
+      {/* Best Ad (Rank 1) Highlight Card - Renders nothing when there are 0 ads */}
       {winner && (
-        <div className="relative overflow-hidden bg-gradient-to-br from-brand-900 via-brand-800 to-brand-purple rounded-3xl p-6 sm:p-8 text-white shadow-xl">
-          <div className="absolute top-0 right-0 -mt-10 -mr-10 w-72 h-72 bg-brand-light/10 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            {/* Left Summary */}
-            <div className="lg:col-span-8 space-y-4">
-              <div className="inline-flex items-center gap-2 bg-amber-400 text-amber-950 px-3 py-1 rounded-full text-xs font-extrabold shadow-sm">
-                <Trophy className="w-3.5 h-3.5 fill-current" />
-                #1 Winning Ad in Active Campaign Set
-              </div>
-
-              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-tight">
-                "{winner.hook || 'Master English Speaking with AI'}"
-              </h2>
-
-              <p className="text-sm text-brand-100 line-clamp-2 leading-relaxed">
-                {winner.body}
-              </p>
-
-              {/* Stat Chips */}
-              <div className="flex flex-wrap gap-4 pt-2 text-xs">
-                <div className="bg-white/10 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-white/15">
-                  <span className="text-brand-200 block text-[10px]">Longevity</span>
-                  <span className="font-bold text-white">{winner.longevity_days} Days Active</span>
-                </div>
-                <div className="bg-white/10 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-white/15">
-                  <span className="text-brand-200 block text-[10px]">Creative Quality</span>
-                  <span className="font-bold text-white">
-                    {Number(winner.creative_quality_score || 0).toFixed(1)}/10
-                  </span>
-                </div>
-                <div className="bg-white/10 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-white/15">
-                  <span className="text-brand-200 block text-[10px]">A/B Variants</span>
-                  <span className="font-bold text-white">
-                    {winner.has_multiple_versions ? 'Multiple Versions Active' : 'Single Version'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="pt-2 flex items-center gap-3">
-                <button
-                  onClick={() => setSelectedAd(winner)}
-                  className="px-5 py-2.5 rounded-xl bg-white text-brand-900 font-bold text-xs hover:bg-brand-50 transition-colors flex items-center gap-1.5 shadow-md"
-                >
-                  <Eye className="w-4 h-4 text-brand" />
-                  <span>Inspect Winner Breakdown</span>
-                </button>
-                <button
-                  onClick={() => onAskAboutAd(winner)}
-                  className="px-5 py-2.5 rounded-xl bg-brand-700/80 hover:bg-brand-600 text-white font-bold text-xs border border-white/20 transition-colors flex items-center gap-1.5"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Ask Arya: Why is this #1?</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Right Score Badge */}
-            <div className="lg:col-span-4 flex flex-col items-center justify-center p-6 bg-white/10 backdrop-blur-md rounded-2xl border border-white/15 text-center">
-              <span className="text-xs uppercase tracking-wider font-semibold text-brand-200 mb-1">
-                Composite Proxy Score
-              </span>
-              <div className="text-5xl font-black text-amber-300 tracking-tight">
-                {Number(winner.composite_score || 0).toFixed(2)}
-              </div>
-              <span className="text-xs text-brand-200 font-medium mt-1">out of 10.0</span>
-              <div className="mt-4 text-[11px] text-brand-100 bg-black/20 px-3 py-1 rounded-full font-mono">
-                ID: {winner.library_id}
-              </div>
-            </div>
-          </div>
-        </div>
+        <BestAdCard
+          winner={winner}
+          onInspect={(ad) => setSelectedAd(ad)}
+          onAskArya={(ad) => onAskAboutAd(ad)}
+        />
       )}
 
       {/* Visual Component Contribution Chart */}
@@ -163,7 +98,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
               Ranked Ad Leaderboard
             </h3>
             <p className="text-xs text-slate-500">
-              All active ads sorted deterministically by weighted composite score.
+              All active ads sorted deterministically by weighted composite score (0-100).
             </p>
           </div>
           <span className="text-xs font-semibold px-3 py-1 bg-slate-100 text-slate-700 rounded-full w-fit">
@@ -177,9 +112,9 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
               <tr className="bg-slate-50/70 border-b border-slate-200 text-slate-400 uppercase text-[10px] font-bold tracking-wider">
                 <th className="py-3.5 px-6">Rank</th>
                 <th className="py-3.5 px-4">Creative & Hook</th>
-                <th className="py-3.5 px-4">Longevity</th>
-                <th className="py-3.5 px-4">Iteration</th>
-                <th className="py-3.5 px-4">Creative Quality</th>
+                <th className="py-3.5 px-4">Longevity (35%)</th>
+                <th className="py-3.5 px-4">Iteration (25%)</th>
+                <th className="py-3.5 px-4">Creative Quality (40%)</th>
                 <th className="py-3.5 px-6 text-right">Composite Score</th>
                 <th className="py-3.5 px-4 text-center">Action</th>
               </tr>
@@ -187,6 +122,9 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
             <tbody className="divide-y divide-slate-100">
               {ads.map((ad, idx) => {
                 const rank = ad.rank || idx + 1;
+                const score = calculateScoreBreakdown(ad);
+                const hasCreativeUrl = Boolean(ad.creative_url && ad.creative_url.trim());
+
                 return (
                   <tr
                     key={ad.library_id || idx}
@@ -218,22 +156,49 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
                     {/* Creative & Hook */}
                     <td className="py-4 px-4 max-w-xs">
                       <div className="flex items-center gap-3">
-                        <img
-                          src={ad.creative_url || 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?auto=format&fit=crop&w=800&q=80'}
-                          alt=""
-                          className="w-12 h-12 rounded-xl object-cover border border-slate-200 flex-shrink-0"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src =
-                              'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80';
-                          }}
-                        />
-                        <div className="truncate">
+                        <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 flex-shrink-0 flex items-center justify-center relative">
+                          {hasCreativeUrl ? (
+                            <img
+                              src={ad.creative_url!}
+                              alt=""
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLElement;
+                                target.style.display = 'none';
+                                const fallback = target.nextElementSibling as HTMLElement;
+                                if (fallback) fallback.style.display = 'flex';
+                              }}
+                            />
+                          ) : null}
+                          <div
+                            className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400 p-1 text-center"
+                            style={{ display: hasCreativeUrl ? 'none' : 'flex' }}
+                            title="Creative preview unavailable"
+                          >
+                            <ImageOff className="w-4 h-4 text-slate-400" />
+                          </div>
+                        </div>
+
+                        <div className="truncate space-y-0.5">
+                          <div className="flex items-center gap-1.5">
+                            {ad.is_mysivi_page ? (
+                              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
+                                <span>MySivi page</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center text-[10px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                                <span>Third-party page</span>
+                              </span>
+                            )}
+                            <span className="text-[10px] font-mono text-slate-400">
+                              ID: {ad.library_id}
+                            </span>
+                          </div>
+
                           <p className="font-bold text-slate-900 text-xs truncate">
                             "{ad.hook || 'Learn English with AI'}"
                           </p>
-                          <span className="text-[11px] font-mono text-slate-400">
-                            ID: {ad.library_id}
-                          </span>
                         </div>
                       </div>
                     </td>
@@ -244,40 +209,39 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
                         <Calendar className="w-3.5 h-3.5" />
                         <span>{ad.longevity_days} days</span>
                       </div>
-                      <span className="text-[10px] text-slate-400">
-                        Score: {Number(ad.longevity_score || 0).toFixed(1)}/10
+                      <span className="text-[10px] text-slate-600 font-bold">
+                        +{score.longevityPts.toFixed(1)} pts
                       </span>
                     </td>
 
                     {/* Iteration */}
                     <td className="py-4 px-4 text-xs">
-                      {ad.has_multiple_versions ? (
-                        <span className="inline-flex items-center gap-1 text-brand-700 font-bold bg-brand-50 px-2 py-0.5 rounded-full border border-brand-200">
-                          <Layers className="w-3 h-3" />
-                          10.0 (Variants)
-                        </span>
-                      ) : (
-                        <span className="text-slate-400 text-[11px]">
-                          0.0 (Single)
-                        </span>
-                      )}
+                      <span className="inline-flex items-center gap-1 text-brand-700 font-bold bg-brand-50 px-2 py-0.5 rounded-full border border-brand-200">
+                        <Layers className="w-3 h-3" />
+                        +{score.iterationPts.toFixed(1)} pts
+                      </span>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">
+                        {ad.has_multiple_versions ? 'Variants Active' : 'Single Variant'}
+                      </span>
                     </td>
 
                     {/* Creative Quality */}
                     <td className="py-4 px-4 text-xs">
                       <div className="flex items-center gap-1 font-bold text-brand-800">
                         <Sparkles className="w-3.5 h-3.5 text-brand" />
-                        <span>{Number(ad.creative_quality_score || 0).toFixed(1)} / 10</span>
+                        <span>+{score.creativePts.toFixed(1)} pts</span>
                       </div>
-                      <span className="text-[10px] text-slate-400">Gemini 2.5 Flash</span>
+                      <span className="text-[10px] text-slate-400">
+                        Raw: {(score.creative01 * 10).toFixed(1)}/10
+                      </span>
                     </td>
 
                     {/* Composite Score */}
                     <td className="py-4 px-6 text-right">
                       <span className="text-base font-extrabold text-slate-900">
-                        {Number(ad.composite_score || 0).toFixed(2)}
+                        {score.composite100.toFixed(1)}
                       </span>
-                      <span className="text-[11px] text-slate-400 block">/ 10.0</span>
+                      <span className="text-[11px] text-slate-400 block">/ 100</span>
                     </td>
 
                     {/* Action */}
@@ -295,6 +259,11 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
               })}
             </tbody>
           </table>
+        </div>
+
+        {/* Footnote on Leaderboard */}
+        <div className="py-3 px-6 bg-slate-50/80 border-t border-slate-100 text-center text-xs text-slate-500 font-medium">
+          Scores are a proxy from public Ad Library data. Impressions, CTR and ROAS are not public.
         </div>
       </div>
 

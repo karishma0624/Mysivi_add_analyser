@@ -26,3 +26,7 @@ frontend/*.tsbuildinfo
 Thumbs.db
 .vscode/
 .idea/
+
+# Supabase CLI temporary files
+supabase/.temp/
+

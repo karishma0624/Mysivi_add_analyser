@@ -104,40 +104,40 @@ export const Methodology: React.FC = () => {
         </div>
 
         <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 font-mono text-xs text-slate-800 leading-loose">
-          <strong>Composite Score =</strong><br />
-          &nbsp;&nbsp;<strong>0.40 × Creative Quality Score</strong> (Gemini 2.5 Flash rubric: Hook, Clarity, CTA, Visual, Offer)<br />
-          &nbsp;&nbsp;<strong>+ 0.35 × Longevity Score</strong> (Normalized days active in Meta's auction: survival heuristic)<br />
-          &nbsp;&nbsp;<strong>+ 0.25 × Iteration Score</strong> (10.0 if testing multiple versions, else 0.0)
+          <strong>Composite Score (0-100 Scale) =</strong><br />
+          &nbsp;&nbsp;<strong>0.40 × Creative Quality × 100</strong> (Max 40 points; Google Gemini 0-10 subscores: Hook, Clarity, CTA, Visual, Offer normalized to 0-1)<br />
+          &nbsp;&nbsp;<strong>+ 0.35 × Longevity × 100</strong> (Max 35 points; Normalized days active in Meta's auction: days / 90 capped at 1.0)<br />
+          &nbsp;&nbsp;<strong>+ 0.25 × Iteration × 100</strong> (Max 25 points; Normalized variant tests: 5+ versions = 1.0 or multiple versions active)
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
           <div className="p-5 rounded-2xl bg-indigo-50/50 border border-indigo-100 space-y-2">
             <div className="flex items-center gap-2 text-brand font-bold text-sm">
               <Sparkles className="w-4 h-4" />
-              <span>40% Creative Quality</span>
+              <span>40 Points: Creative Quality</span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Gemini 2.5 Flash evaluates the opening hook, benefit clarity, call-to-action strength, visual relevance, and pricing offer.
+              Google Gemini evaluates five 0-10 subscores: Hook Strength, Message Clarity, CTA Strength, Visual Appeal, and Offer Strength. Their average is stored on a 0-1 scale (4 decimals) and contributes up to 40 points to the composite score.
             </p>
           </div>
 
           <div className="p-5 rounded-2xl bg-emerald-50/50 border border-emerald-100 space-y-2">
             <div className="flex items-center gap-2 text-emerald-700 font-bold text-sm">
               <Calendar className="w-4 h-4" />
-              <span>35% Longevity Signal</span>
+              <span>35 Points: Longevity Signal</span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Meta's algorithm shuts down losing ads rapidly. An ad running continuously for 30+ days is an empirical signal of positive return.
+              Meta shuts down unprofitable ads quickly. Days survived in auction are normalized (90 days = 1.0, stored on a 0-1 scale) and contribute up to 35 points as an empirical signal of positive return.
             </p>
           </div>
 
           <div className="p-5 rounded-2xl bg-purple-50/50 border border-purple-100 space-y-2">
             <div className="flex items-center gap-2 text-purple-700 font-bold text-sm">
               <Layers className="w-4 h-4" />
-              <span>25% Iteration Signal</span>
+              <span>25 Points: Iteration Signal</span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Active variant testing signals the growth team has identified a winning core concept and is optimizing variations.
+              Active variant testing (Apify collation count normalized 1-5+ or multiple versions active, stored on a 0-1 scale) contributes up to 25 points, verifying the growth team is optimizing a winning concept.
             </p>
           </div>
         </div>

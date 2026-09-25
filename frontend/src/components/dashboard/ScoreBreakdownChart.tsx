@@ -1,5 +1,6 @@
 import React from 'react';
 import type { AdLeaderboardRow } from '../../lib/types';
+import { calculateScoreBreakdown } from '../../lib/scoreUtils';
 
 interface ScoreBreakdownChartProps {
   ads: AdLeaderboardRow[];
@@ -16,26 +17,26 @@ export const ScoreBreakdownChart: React.FC<ScoreBreakdownChartProps> = ({ ads })
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
         <div>
           <h3 className="text-base font-bold text-slate-900">
-            Top Performing Ads — 3-Signal Proxy Composition
+            Top Performing Ads — 3-Signal Proxy Composition (0-100 Scale)
           </h3>
           <p className="text-xs text-slate-500">
-            Auditing the exact weighted components that determine the #1 winning ad.
+            Auditing the exact weighted points (out of 100) that determine the #1 winning ad.
           </p>
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-4 text-xs font-semibold">
+        <div className="flex flex-wrap items-center gap-4 text-xs font-semibold">
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-sm bg-brand" />
-            <span className="text-slate-600">Creative Quality (40%)</span>
+            <span className="text-slate-600">Creative Quality (40% / 40 pts)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-sm bg-emerald-500" />
-            <span className="text-slate-600">Longevity (35%)</span>
+            <span className="text-slate-600">Longevity (35% / 35 pts)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-sm bg-brand-purple" />
-            <span className="text-slate-600">Iteration (25%)</span>
+            <span className="text-slate-600">Iteration (25% / 25 pts)</span>
           </div>
         </div>
       </div>
@@ -43,11 +44,7 @@ export const ScoreBreakdownChart: React.FC<ScoreBreakdownChartProps> = ({ ads })
       {/* Bar List */}
       <div className="space-y-4">
         {topAds.map((ad, index) => {
-          // Calculate individual point contribution to the final 10-point scale
-          const creativePart = 0.40 * (ad.creative_quality_score || 0);
-          const longevityPart = 0.35 * (ad.longevity_score || 0);
-          const iterationPart = 0.25 * (ad.has_multiple_versions ? 10 : 0);
-          const total = creativePart + longevityPart + iterationPart;
+          const score = calculateScoreBreakdown(ad);
 
           return (
             <div key={ad.library_id || index} className="space-y-1.5">
@@ -61,29 +58,30 @@ export const ScoreBreakdownChart: React.FC<ScoreBreakdownChartProps> = ({ ads })
                   </span>
                 </div>
                 <div className="font-bold text-slate-900">
-                  {total.toFixed(2)} <span className="text-slate-400 font-normal">/ 10</span>
+                  {score.composite100.toFixed(1)}{' '}
+                  <span className="text-slate-400 font-normal">/ 100</span>
                 </div>
               </div>
 
-              {/* Stacked Bar Container */}
+              {/* Stacked Bar Container (Points out of 100 total width) */}
               <div className="w-full h-4 bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
                 {/* Creative Quality Segment */}
                 <div
                   className="bg-brand transition-all duration-500 hover:brightness-110"
-                  style={{ width: `${(creativePart / 10) * 100}%` }}
-                  title={`Creative Quality: +${creativePart.toFixed(2)} pts (Raw: ${(ad.creative_quality_score || 0).toFixed(1)}/10)`}
+                  style={{ width: `${score.creativePts}%` }}
+                  title={`Creative Quality: +${score.creativePts.toFixed(1)} pts (Raw: ${(score.creative01 * 10).toFixed(1)}/10)`}
                 />
                 {/* Longevity Segment */}
                 <div
                   className="bg-emerald-500 transition-all duration-500 hover:brightness-110"
-                  style={{ width: `${(longevityPart / 10) * 100}%` }}
-                  title={`Longevity: +${longevityPart.toFixed(2)} pts (${ad.longevity_days} active days)`}
+                  style={{ width: `${score.longevityPts}%` }}
+                  title={`Longevity: +${score.longevityPts.toFixed(1)} pts (${ad.longevity_days} active days)`}
                 />
                 {/* Iteration Segment */}
                 <div
                   className="bg-brand-purple transition-all duration-500 hover:brightness-110"
-                  style={{ width: `${(iterationPart / 10) * 100}%` }}
-                  title={`Iteration: +${iterationPart.toFixed(2)} pts (${ad.has_multiple_versions ? 'Active variants tested' : 'Single variant'})`}
+                  style={{ width: `${score.iterationPts}%` }}
+                  title={`Iteration: +${score.iterationPts.toFixed(1)} pts (${ad.has_multiple_versions ? 'Active variants tested' : 'Single variant'})`}
                 />
               </div>
             </div>

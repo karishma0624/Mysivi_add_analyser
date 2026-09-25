@@ -11,6 +11,8 @@ import { useAds } from './hooks/useAds';
 import type { AdLeaderboardRow } from './lib/types';
 import { AlertCircle, RefreshCw, KeyRound, ExternalLink } from 'lucide-react';
 
+import { calculateScoreBreakdown } from './lib/scoreUtils';
+
 export function App() {
   const [activeTab, setActiveTab] = useState<
     'overview' | 'gallery' | 'leaderboard' | 'metrics' | 'methodology'
@@ -22,8 +24,9 @@ export function App() {
   const { ads, metrics, loading, error, isConfigured, refetch } = useAds();
 
   const handleAskAboutAd = (ad: AdLeaderboardRow) => {
+    const score = calculateScoreBreakdown(ad);
     setInitialQuestion(
-      `Please explain why ad ID ${ad.library_id} with hook "${ad.hook}" received a composite score of ${Number(ad.composite_score || 0).toFixed(2)}/10. What are its strengths and weaknesses?`
+      `Please explain why ad ID ${ad.library_id} with hook "${ad.hook}" received a composite score of ${score.composite100.toFixed(1)}/100. What are its strengths and weaknesses?`
     );
     setIsChatOpen(true);
   };
@@ -80,6 +83,7 @@ export function App() {
             onOpenChat={() => setIsChatOpen(true)}
             adCount={ads.length}
             winner={winner}
+            onAskAboutAd={handleAskAboutAd}
           />
         )}
 
@@ -91,7 +95,7 @@ export function App() {
                   MySivi Facebook Ad Gallery
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                  Public Meta Ad Library creatives analyzed by Gemini 2.5 Flash.
+                  Public Meta Ad Library creatives analyzed by Google Gemini.
                 </p>
               </div>
 

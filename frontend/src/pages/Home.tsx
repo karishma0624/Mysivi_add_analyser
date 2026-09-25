@@ -15,6 +15,7 @@ import {
   Award,
 } from 'lucide-react';
 import type { AdLeaderboardRow } from '../lib/types';
+import { BestAdCard } from '../components/ads/BestAdCard';
 
 interface HomeProps {
   onExploreLeaderboard: () => void;
@@ -22,6 +23,7 @@ interface HomeProps {
   onOpenChat: () => void;
   adCount: number;
   winner: AdLeaderboardRow | null;
+  onAskAboutAd?: (ad: AdLeaderboardRow) => void;
 }
 
 export const Home: React.FC<HomeProps> = ({
@@ -30,6 +32,7 @@ export const Home: React.FC<HomeProps> = ({
   onOpenChat,
   adCount,
   winner,
+  onAskAboutAd,
 }) => {
   return (
     <div className="space-y-24">
@@ -75,14 +78,14 @@ export const Home: React.FC<HomeProps> = ({
             </button>
           </div>
 
-          {/* Stats Bar (matching mysivi.ai: 10M+ Downloads / 15+ Languages / 4.7 User Rating) */}
+          {/* Real Count Stats Bar */}
           <div className="pt-10 max-w-2xl mx-auto grid grid-cols-3 divide-x divide-slate-200 text-center border-t border-slate-200/60">
             <div className="px-2 sm:px-4">
               <span className="block text-2xl sm:text-3xl font-black text-slate-900">
-                {adCount > 0 ? `${adCount} Real Ads` : 'Live Pipeline'}
+                {adCount} {adCount === 1 ? 'Real Ad' : 'Real Ads'}
               </span>
               <span className="text-xs font-medium text-slate-500">
-                Meta Ad Library Ingested
+                {adCount === 0 ? 'Analyzed in Database' : 'Meta Ad Library Ingested'}
               </span>
             </div>
             <div className="px-2 sm:px-4">
@@ -145,6 +148,59 @@ export const Home: React.FC<HomeProps> = ({
         </div>
       </section>
 
+      {/* Best Ad (Rank 1) Highlight Section - Render nothing when there are 0 ads */}
+      {adCount > 0 && winner && (
+        <section className="max-w-5xl mx-auto px-4">
+          <div className="text-center mb-6 space-y-1.5">
+            <span className="text-xs font-bold uppercase tracking-wider text-brand">
+              Rank #1 Top Performing Creative
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              Current Campaign Winner
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 max-w-lg mx-auto">
+              Top advertisement in the active campaign set ranked deterministically by our 3-signal proxy model.
+            </p>
+          </div>
+
+          <BestAdCard
+            winner={winner}
+            onInspect={() => onExploreLeaderboard()}
+            onAskArya={() => (onAskAboutAd ? onAskAboutAd(winner) : onOpenChat())}
+          />
+        </section>
+      )}
+
+      {/* Honest Empty State when 0 ads */}
+      {adCount === 0 && (
+        <section className="max-w-3xl mx-auto px-4">
+          <div className="bg-white rounded-3xl border-2 border-dashed border-slate-200 p-8 sm:p-12 text-center shadow-sm">
+            <div className="w-14 h-14 rounded-2xl bg-brand-50 text-brand flex items-center justify-center mx-auto mb-4 shadow-inner">
+              <Workflow className="w-7 h-7" />
+            </div>
+
+            <h3 className="text-xl font-extrabold text-slate-900 tracking-tight mb-2">
+              No ads analyzed yet (0 in database)
+            </h3>
+
+            <p className="text-sm font-semibold text-brand-700 max-w-lg mx-auto mb-3">
+              Run the n8n workflow to fetch and analyze real MySivi advertisements from the Meta Ad Library.
+            </p>
+
+            <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed mb-6">
+              This platform strictly evaluates genuine scraped ad creatives using Google Gemini. Once data is ingested into Supabase, the Rank #1 Best Ad highlight card and gallery will appear here automatically.
+            </p>
+
+            <button
+              onClick={onExploreLeaderboard}
+              className="px-6 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors"
+            >
+              View Leaderboard Status
+            </button>
+          </div>
+        </section>
+      )}
+
       {/* 2-Column Feature Grid (mirrors mysivi.ai's "Why Choose MySivi" section) */}
       <section className="max-w-6xl mx-auto px-4 space-y-12">
         <div className="text-center space-y-3 max-w-2xl mx-auto">
@@ -182,7 +238,7 @@ export const Home: React.FC<HomeProps> = ({
               Grounded RAG Chatbot ("Arya")
             </h3>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              Ask Arya why an ad won, compare hook strengths between variants, or search ads by topic. Answers are grounded in real Supabase pgvector embeddings and Gemini 2.5 Flash reasoning.
+              Ask Arya why an ad won, compare hook strengths between variants, or search ads by topic. Answers are grounded in real Supabase pgvector embeddings and Gemini reasoning.
             </p>
           </div>
 
@@ -192,7 +248,7 @@ export const Home: React.FC<HomeProps> = ({
               <Workflow className="w-6 h-6" />
             </div>
             <h3 className="text-lg font-bold text-slate-900">
-              Automated 12-Node n8n Pipeline
+              Automated 14-Item n8n Pipeline
             </h3>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
               Our exportable n8n workflow orchestrates the entire lifecycle: Apify Meta Ad Library scraping, Gemini extraction & scoring, deterministic math, and vector embeddings in Supabase.
