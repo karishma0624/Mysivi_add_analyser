@@ -4,6 +4,13 @@
 
 ---
 
+## Links
+- GitHub Repository: https://github.com/karishma0624/Mysivi_add_analyser
+- n8n Workflow File: n8n/mysivi-ad-scraper-workflow.json (submitted alongside this report)
+- Loom Video Walkthrough: [PASTE_LOOM_LINK_HERE]
+
+---
+
 ## 1. Reality Check: Public Meta Ad Library vs. Meta Ads Manager API
 
 A critical requirement of professional growth marketing and performance engineering is **data integrity**. 
